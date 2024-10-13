@@ -8,7 +8,7 @@ from sqlmodel import select
 from app.ai.main_agent import call_main_agent
 from app.schemas import AIResponse, AIRequest
 import uuid
-ai_router = APIRouter()
+ai_router = APIRouter(prefix = "/ai")
 
 
 # Dependency to get the compiled main_agent

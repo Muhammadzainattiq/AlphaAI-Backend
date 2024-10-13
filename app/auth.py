@@ -12,7 +12,7 @@ from fastapi.security import OAuth2PasswordBearer
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # OAuth2PasswordBearer with the correct token URL
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")  
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")  
 
 # Create a password hash
 def get_password_hash(password: str) -> str:

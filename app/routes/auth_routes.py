@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, List
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session
@@ -7,7 +7,7 @@ from app.models import User
 from app.auth import get_password_hash, verify_password, create_access_token, get_current_user
 from app.db import get_session
 from sqlmodel import select
-auth_router = APIRouter()
+auth_router = APIRouter(prefix = "/auth")
 
 # Signup Endpoint
 @auth_router.post("/signup", response_model=UserResponse)
@@ -43,7 +43,48 @@ def refresh_token(current_user: User = Depends(get_current_user)):
     access_token = create_access_token(data={"sub": str(current_user.id)})
     return {"access_token": access_token, "token_type": "bearer"}
 
-# Protected Route
-@auth_router.get("/protected-route")
-def protected_route(current_user: User = Depends(get_current_user)):
-    return {"msg": "You have access", "user": current_user}
+
+# Get All Users Endpoint
+@auth_router.get("/users", response_model=List[UserResponse])
+def get_all_users(session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+    users = session.exec(select(User)).all()
+    return users
+
+
+
+# Update User Endpoint
+@auth_router.put("/users/{user_id}", response_model=UserResponse)
+def update_user(user_id: int, user_data: UserCreate, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+    user = session.exec(select(User).where(User.id == user_id)).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    # Update fields
+    user.username = user_data.username
+    user.email = user_data.email
+    user.hashed_password = get_password_hash(user_data.password)
+
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return user
+
+
+# Delete User Endpoint
+@auth_router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_user(user_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+    user = session.exec(select(User).where(User.id == user_id)).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    session.delete(user)
+    session.commit()
+    return None
+
+
+@auth_router.get("/users/{user_id}", response_model=UserResponse)
+def get_user(user_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+    user = session.exec(select(User).where(User.id == user_id)).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    return user

@@ -1,6 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import SQLModel, Session, create_engine
+from sqlmodel import SQLModel, Session, create_engine, text
 from app.main import app
 from app.db import get_session
 
@@ -26,10 +26,21 @@ def client():
         yield client
         SQLModel.metadata.drop_all(engine)
 
+# Fixture to clean up the database between tests
+@pytest.fixture(autouse=True)
+def clean_db():
+    """Clean the database between tests."""
+    # Clean the tables after each test to ensure isolation
+    yield
+    with Session(engine) as session:
+        # Clear data from relevant tables, e.g., User table
+        session.exec(text("DELETE FROM user"))
+        session.commit()
+
 def test_signup(client):
     # Test that a new user can be created successfully
     response = client.post(
-        "/signup",
+        "/auth/signup",
         json={"username": "testuser", "email": "testuser@example.com", "password": "testpassword"}
     )
     assert response.status_code == 200
@@ -39,7 +50,7 @@ def test_signup(client):
 
     # Test that the same user cannot be created again
     response = client.post(
-        "/signup",
+        "/auth/signup",
         json={"username": "testuser", "email": "testuser@example.com", "password": "testpassword"}
     )
     assert response.status_code == 400
@@ -47,14 +58,14 @@ def test_signup(client):
 
 def test_login(client):
     # First, ensure the user is created by calling the signup
-    client.post("/signup", json={
+    client.post("/auth/signup", json={
         "username": "testuser",
         "email": "testlogin@example.com",
         "password": "password123"
     })
 
     # Use the email as the username in the headers
-    response = client.post("/login", data={
+    response = client.post("/auth/login", data={
         "username": "testlogin@example.com",  # Email as username
         "password": "password123"
     })
@@ -62,27 +73,19 @@ def test_login(client):
     assert response.status_code == 200
     assert "access_token" in response.json()  # Ensure access_token is in the response
 
-def test_protected_route(client):
-    # First, log in to get a token
-    response = client.post("/login", data={
-        "username": "testlogin@example.com",  # Email as username
-        "password": "password123"
-    })
-    
-    # Check if the access_token is available
-    assert response.status_code == 200
-    access_token = response.json().get("access_token")
-    assert access_token is not None, "Access token is missing"
-
-    # Access the protected route with the access token
-    response = client.get("/protected-route", headers={"Authorization": f"Bearer {access_token}"})
-    assert response.status_code == 200
-    assert response.json()["msg"] == "You have access"
 
 
 def test_refresh_token(client):
+
+    # First, ensure the user is created by calling the signup
+    client.post("/auth/signup", json={
+        "username": "testuser",
+        "email": "testlogin@example.com",
+        "password": "password123"
+    })
+
     # First, log in to get a token using the correct email
-    response = client.post("/login", data={
+    response = client.post("/auth/login", data={
         "username": "testlogin@example.com",  # Use the same email as the test_login test
         "password": "password123"
     })
@@ -92,6 +95,139 @@ def test_refresh_token(client):
     assert access_token is not None, "Access token is missing"
 
     # Use the token to refresh
-    response = client.post("/token/refresh", headers={"Authorization": f"Bearer {access_token}"})
+    response = client.post("/auth/token/refresh", headers={"Authorization": f"Bearer {access_token}"})
     assert response.status_code == 200
     assert "access_token" in response.json()  # Ensure access_token is in the response
+
+
+
+def test_get_all_users(client):
+    # Step 1: First, sign up two users
+    client.post("/auth/signup", json={
+        "username": "user1",
+        "email": "user1@example.com",
+        "password": "password123"
+    })
+    client.post("/auth/signup", json={
+        "username": "user2",
+        "email": "user2@example.com",
+        "password": "password123"
+    })
+
+    # Step 2: Log in as one of the users to get an access token
+    response = client.post("/auth/login", data={
+        "username": "user1@example.com",
+        "password": "password123"
+    })
+    assert response.status_code == 200
+    access_token = response.json().get("access_token")
+    assert access_token is not None, "Access token is missing"
+
+    # Step 3: Use the access token to authenticate the request to get all users
+    response = client.get("/auth/users", headers={"Authorization": f"Bearer {access_token}"})
+    assert response.status_code == 200
+
+    # Step 4: Verify that the response contains the two users
+    data = response.json()
+    assert len(data) == 2  # Ensure there are 2 users
+    assert data[0]["email"] == "user1@example.com"
+    assert data[1]["email"] == "user2@example.com"
+
+
+
+def test_update_user(client):
+    # Step 1: Sign up a user
+    response = client.post("/auth/signup", json={
+        "username": "oldusername",
+        "email": "oldemail@example.com",
+        "password": "oldpassword"
+    })
+    assert response.status_code == 200
+    user_id = response.json()["id"]
+
+    # Step 2: Log in to get the access token
+    response = client.post("/auth/login", data={
+        "username": "oldemail@example.com",
+        "password": "oldpassword"
+    })
+    assert response.status_code == 200
+    access_token = response.json().get("access_token")
+    assert access_token is not None, "Access token is missing"
+
+    # Step 3: Update the user details
+    response = client.put(f"/auth/users/{user_id}", json={
+        "username": "newusername",
+        "email": "newemail@example.com",
+        "password": "newpassword"
+    }, headers={"Authorization": f"Bearer {access_token}"})
+    assert response.status_code == 200
+
+    # Step 4: Verify the user details are updated
+    updated_user = response.json()
+    assert updated_user["username"] == "newusername"
+    assert updated_user["email"] == "newemail@example.com"
+
+
+def test_delete_user(client):
+    # Step 1: Sign up a user
+    response = client.post("/auth/signup", json={
+        "username": "deletetestuser",
+        "email": "deletetestuser@example.com",
+        "password": "password123"
+    })
+    assert response.status_code == 200
+    user_id = response.json()["id"]
+
+    # Step 2: Log in to get the access token
+    response = client.post("/auth/login", data={
+        "username": "deletetestuser@example.com",
+        "password": "password123"
+    })
+    assert response.status_code == 200
+    access_token = response.json().get("access_token")
+    assert access_token is not None, "Access token is missing"
+
+    # Step 3: Delete the user
+    response = client.delete(f"/auth/users/{user_id}", headers={"Authorization": f"Bearer {access_token}"})
+    assert response.status_code == 204  # No content, successful deletion
+
+    # Step 4: Verify the token is now invalid (expecting a 401 Unauthorized)
+    response = client.get(f"/auth/users/{user_id}", headers={"Authorization": f"Bearer {access_token}"})
+    assert response.status_code == 401, "Expected 401 Unauthorized after user deletion"
+
+
+
+def test_get_user(client):
+    # Step 1: Sign up a new user
+    response = client.post("/auth/signup", json={
+        "username": "testgetuser",
+        "email": "testgetuser@example.com",
+        "password": "password123"
+    })
+    assert response.status_code == 200
+    user_data = response.json()
+    user_id = user_data["id"]
+
+    # Step 2: Log in to get the access token
+    response = client.post("/auth/login", data={
+        "username": "testgetuser@example.com",
+        "password": "password123"
+    })
+    assert response.status_code == 200
+    access_token = response.json().get("access_token")
+    assert access_token is not None, "Access token is missing"
+
+    # Step 3: Get the user details using the correct user ID
+    response = client.get(f"/auth/users/{user_id}", headers={"Authorization": f"Bearer {access_token}"})
+    assert response.status_code == 200
+    user_response_data = response.json()
+    assert user_response_data["id"] == user_id
+    assert user_response_data["username"] == "testgetuser"
+    assert user_response_data["email"] == "testgetuser@example.com"
+
+    # Step 4: Try to get details of a non-existing user (expecting 404)
+    non_existing_user_id = user_id + 1000  # Simulate a non-existing user
+    response = client.get(f"/auth/users/{non_existing_user_id}", headers={"Authorization": f"Bearer {access_token}"})
+    assert response.status_code == 404
+    assert response.json()["detail"] == "User not found"
+
