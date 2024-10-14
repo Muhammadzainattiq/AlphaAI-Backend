@@ -2,8 +2,8 @@ from typing import Annotated, List
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session
-from app.schemas import UserCreate, UserResponse, Token
-from app.models import User
+from app.schemas.user_schemas import UserCreate, UserResponse, Token
+from app.models.user_models import User
 from app.auth import get_password_hash, verify_password, create_access_token, get_current_user
 from app.db import get_session
 from sqlmodel import select

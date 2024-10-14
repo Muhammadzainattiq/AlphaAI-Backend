@@ -3,7 +3,7 @@ from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from app import config
 from app.db import get_session
-from app.models import User
+from app.models.user_models import User
 from sqlmodel import Session, select
 from fastapi import HTTPException, Depends
 from fastapi.security import OAuth2PasswordBearer

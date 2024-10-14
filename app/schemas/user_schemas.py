@@ -23,8 +23,4 @@ class Token(SQLModel):
     token_type: str
 
 
-class AIRequest(SQLModel):
-    query: str
 
-class AIResponse(SQLModel):
-    messages: list

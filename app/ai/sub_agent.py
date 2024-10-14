@@ -5,7 +5,7 @@ from langgraph.graph import START, StateGraph, END
 from langgraph.prebuilt import tools_condition, ToolNode
 import os
 
-from app.tools import (SubState, check_single_or_multiple, tavily_search, web_loader, combine_news, continue_to_url_loads)
+from app.ai.tools import (SubState, check_single_or_multiple, tavily_search, web_loader, combine_news, continue_to_url_loads)
 
 os.environ['TAVILY_API_KEY'] = "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"
 

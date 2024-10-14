@@ -12,7 +12,7 @@ from datetime import datetime
 from IPython.display import Image, display
 from langchain_openai import ChatOpenAI
 from app.ai.sub_agent import compile_sub_agent
-from app.tools import SubState, llm
+from app.ai.tools import SubState, format_ai_response, llm
 
 os.environ['TAVILY_API_KEY'] = "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"
 
@@ -113,6 +113,8 @@ def call_main_agent(query: str, thread_id: str, main_agent):
     
     # Call the agent with the messages and thread-specific config
     response = main_agent.invoke({"messages": messages}, config)
+
+    formatted_response = format_ai_response(response)  
     
-    return response
+    return formatted_response
 

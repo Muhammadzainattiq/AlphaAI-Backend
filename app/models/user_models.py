@@ -8,3 +8,4 @@ class User(SQLModel, table=True):
     email: EmailStr
     hashed_password: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
+

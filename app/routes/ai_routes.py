@@ -2,11 +2,11 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session
 from app.auth import get_current_user
-from app.models import User
+from app.models.user_models import User
 from app.db import get_session
 from sqlmodel import select
 from app.ai.main_agent import call_main_agent
-from app.schemas import AIResponse, AIRequest
+from app.schemas.ai_schemas import AIResponse, AIRequest
 import uuid
 ai_router = APIRouter(prefix = "/ai")
 

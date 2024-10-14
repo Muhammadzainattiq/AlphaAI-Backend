@@ -1,7 +1,10 @@
 
+import json
+from datetime import datetime
 from typing import TypedDict
 from app.ai.llm import llm
 from langchain_community.tools.tavily_search import TavilySearchResults
+from langchain_core.messages import HumanMessage, AIMessage
 from langchain_community.document_loaders import WebBaseLoader
 import os
 from typing import Dict, List
@@ -101,11 +104,11 @@ def tavily_search(state: SubState) -> SubState:
         about a single news article. The details may include the article content, any
         associated images, and additional contextual information (if available).
     """
-    max_results = 3
+    max_results = 1
     if state["single_or_multiple"] == "single":
-        max_results = 2
+        max_results = 1
     elif state["single_or_multiple"] == "multiple":
-        max_results = 4
+        max_results = 1
     tool = TavilySearchResults(
         max_results=max_results,
         include_answer=True,
@@ -140,11 +143,45 @@ Here is the user query: {query}
    - Response: single
 4. User Query: "What are the current headlines in sports and entertainment?"
    - Response: multiple
-5. User Query: "Who won the last football world cup?"
-   - Response: single
-6. User Query: "What are the latest news articles about tech innovations?"
-   - Response: multiple>
 """
   formatted_prompt = prompt.format(query = state['query'])
   response = llm.invoke(formatted_prompt).content.strip()
   return {"single_or_multiple": response}
+
+
+def format_ai_response(data: Dict) -> Dict:
+    """
+    Format the AI response to include only human and non-empty AI messages.
+
+    Args:
+        data (Dict): The input data containing messages.
+
+    Returns:
+        Dict: A dictionary with filtered messages.
+    """
+    # Initialize a list to hold filtered messages
+    filtered_messages = []
+
+    # Iterate through each message in the input data
+    for message in data['messages']:
+        # Check if the message is from a HumanMessage or AIMessage with non-empty content
+        if isinstance(message, HumanMessage):
+            filtered_messages.append({
+                "role": "human",
+                "content": message.content,
+                "timestamp": datetime.utcnow().isoformat() + "Z",  # ISO 8601 format
+                "id": message.id  # Use the existing message ID
+            })
+        elif isinstance(message, AIMessage) and message.content.strip() != "":
+            filtered_messages.append({
+                "role": "ai",
+                "content": message.content,
+                "timestamp": datetime.utcnow().isoformat() + "Z",  # ISO 8601 format
+                "id": message.id  # Use the existing message ID
+            })
+
+    # Create a dictionary to match the expected output format
+    result = {"messages": filtered_messages}
+
+    # Return the result as a dictionary
+    return result
