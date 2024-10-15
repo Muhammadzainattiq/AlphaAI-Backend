@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.routes import auth_routes, ai_routes
+from app.routes import auth_routes, ai_routes, user_routes
 from app.db import create_db_and_tables
 from app.ai.main_agent import compile_main_agent
 from app.ai.sub_agent import compile_sub_agent
@@ -31,6 +31,7 @@ app = FastAPI(lifespan=lifespan)
 # Include authentication and AI routes separately
 app.include_router(auth_routes.auth_router)
 app.include_router(ai_routes.ai_router)
+app.include_router(user_routes.user_router)
 
 @app.get("/")
 def read_root():
