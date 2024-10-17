@@ -5,6 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
+    container_name: HeadlineAI
     volumes:
       - .:/code  # Sync local development directory with the container
     depends_on:

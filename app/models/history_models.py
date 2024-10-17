@@ -10,8 +10,7 @@ class Conversation(SQLModel, table=True):
     user_id: int = Field(foreign_key="user.id")
     created_at: datetime = Field(default_factory=datetime.utcnow)
     is_active: bool = Field(default=True)
-    messages: List
-    ["Message"] = Relationship(back_populates="conversation")
+    messages: List["Message"] = Relationship(back_populates="conversation")
 
 class Message(SQLModel, table=True):
     id: int = Field(default=None, primary_key=True)

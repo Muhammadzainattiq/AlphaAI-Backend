@@ -15,3 +15,7 @@ class ConversationResponse(SQLModel):
     created_at: datetime
     is_active: bool
     messages: List[MessageCreate]
+
+
+class MessageUpdateContent(SQLModel):
+    content: str
