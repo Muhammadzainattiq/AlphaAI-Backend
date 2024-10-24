@@ -1,0 +1,14 @@
+{
+    "containerApps.deploymentConfigurations": [
+        {
+            "label": "headlineai",
+            "type": "AcrDockerBuildRequest",
+            "dockerfilePath": "Dockerfile.dev",
+            "srcPath": ".",
+            "envPath": ".env",
+            "resourceGroup": "headlineaienv",
+            "containerApp": "headlineai",
+            "containerRegistry": "headlineaienv69cbdd"
+        }
+    ]
+}

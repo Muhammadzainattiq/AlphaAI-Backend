@@ -47,9 +47,7 @@ def delete_user(user_id: int, session: Session = Depends(get_session), current_u
     return None
 
 
-@user_router.get("/get_user/{user_id}", response_model=UserResponse)
-def get_user(user_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
-    user = session.exec(select(User).where(User.id == user_id)).first()
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    return user
+@user_router.get("/get_current_user_details/", response_model=UserResponse)
+def get_user(current_user: User = Depends(get_current_user)):
+    print(type(current_user))
+    return current_user

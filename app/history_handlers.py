@@ -9,14 +9,22 @@ def create_conversation(session: Session, user_id: int) -> Conversation:
     
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+
+    # Check for any active conversation and mark it inactive
+    active_conversation = session.exec(select(Conversation).where(Conversation.user_id == user_id, Conversation.is_active == True)).first()
     
-    # Proceed to create the conversation if the user exists
+    if active_conversation:
+        active_conversation.is_active = False
+        session.add(active_conversation)
+    
+    # Proceed to create the new conversation
     conversation = Conversation(user_id=user_id)
     session.add(conversation)
     session.commit()
     session.refresh(conversation)
     
     return conversation
+
 
 
 def add_message_to_conversation(session: Session, conversation_id: str, role: str, content: str):
@@ -32,14 +40,6 @@ def add_message_to_conversation(session: Session, conversation_id: str, role: st
     session.commit()
     session.refresh(message)
     return message
-
-def get_conversation_by_id(session: Session, conversation_id: str):
-    conversation = session.exec(select(Conversation).where(Conversation.id == conversation_id)).first()
-    
-    if not conversation:
-        raise HTTPException(status_code=404, detail="Conversation not found")
-    
-    return conversation
 
 
 # Delete conversation handler
@@ -69,9 +69,10 @@ def mark_conversation_as_inactive(session: Session, conversation_id: str):
     # Mark the conversation as inactive
     conversation.is_active = False
     session.commit()
+    session.refresh(conversation)
     
-    return {"message": "Conversation marked as inactive"}
-
+    return conversation
+    
 
 def mark_conversation_as_active(session: Session, conversation_id: str):
     # Fetch the conversation by ID
@@ -83,8 +84,9 @@ def mark_conversation_as_active(session: Session, conversation_id: str):
     # Mark the conversation as active
     conversation.is_active = True
     session.commit()
+    session.refresh(conversation)
     
-    return {"message": "Conversation marked as active"}
+    return conversation
 
 
 
@@ -102,3 +104,41 @@ def update_message_handler(session: Session, message_id: int, new_content: str):
     session.refresh(message)
     
     return message
+
+
+
+def get_conversation_history(session: Session, conversation_id: str):
+    # Log the conversation ID being queried
+    print(f"Fetching conversation with ID: {conversation_id}")
+    
+    # Fetch the conversation by its primary key 'conversation_id'
+    conversation = session.exec(select(Conversation).where(Conversation.conversation_id == conversation_id)).first()
+
+    if not conversation:
+        print(f"Conversation with ID {conversation_id} not found.")
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    
+    # Retrieve all messages related to this conversation
+    messages = session.exec(select(Message).where(Message.conversation_id == conversation_id)).all()
+
+    if not messages:
+        print(f"No messages found for conversation {conversation_id}.")
+        raise HTTPException(status_code=404, detail="No messages found for this conversation")
+    
+    # Return conversation history
+    conversation_history = []
+    for message in messages:
+        conversation_history.append({
+            "message_id": message.message_id,  # Use message_id from the Message model
+            "role": message.role,
+            "content": message.content,
+            "created_at": message.created_at
+        })
+    
+    return {
+        "conversation_id": conversation.conversation_id,  # Use conversation_id as defined in the Conversation model
+        "user_id": conversation.user_id,
+        "created_at": conversation.created_at,
+        "is_active": conversation.is_active,
+        "messages": conversation_history
+    }

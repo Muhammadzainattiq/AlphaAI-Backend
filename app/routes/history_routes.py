@@ -2,15 +2,15 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlmodel import select
 from app.models.history_models import Conversation, Message
-from app.schemas.history_schemas import ConversationResponse, MessageCreate, MessageUpdateContent
+from app.schemas.history_schemas import HistoryResponse, MessageCreate, MessageUpdateContent
 from app.db import get_session
-from app.history_handlers import create_conversation, add_message_to_conversation, delete_conversation, get_all_user_conversations, get_conversation_by_id, mark_conversation_as_active, mark_conversation_as_inactive, update_message_handler
+from app.history_handlers import create_conversation, add_message_to_conversation, delete_conversation, get_all_user_conversations, get_conversation_history, mark_conversation_as_active, mark_conversation_as_inactive, update_message_handler
 from app.auth import get_current_user
 from app.models.user_models import User
 history_router = APIRouter(prefix='/history')
 
 # Create a new conversation
-@history_router.post("/start_conversation/")
+@history_router.post("/start_new_conversation/")
 def start_conversation(session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
     conversation = create_conversation(session, current_user.id)
     return conversation
@@ -22,14 +22,17 @@ def send_message(conversation_id: str, message: MessageCreate, session: Session 
     print("Returned by handler>>>", new_message)
     return new_message
 
-# Get a conversation by its ID (with history)
-@history_router.get("/get_conversation/{conversation_id}", response_model=ConversationResponse)
-def get_conversation(conversation_id: str, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
-    conversation = get_conversation_by_id(session, conversation_id)
-    if conversation is None:
-        raise HTTPException(status_code=404, detail="Conversation not found")
-    return conversation
 
+@history_router.get("/resume_old_conversation/{conversation_id}", response_model=HistoryResponse)
+def resume_conversation_route(conversation_id: str, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+    mark_conversation_as_active(session, conversation_id)
+    history = get_conversation_history(session, conversation_id)
+    return history
+
+@history_router.get("/exit_conversation/{conversation_id}")
+def exit_conversation_route(conversation_id: str, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+    conversation = mark_conversation_as_inactive(session, conversation_id)
+    return conversation
 
 # **New** Route to delete conversation
 @history_router.delete("/delete_conversation/{conversation_id}")
@@ -38,7 +41,7 @@ def delete_conversation_route(conversation_id: str, session: Session = Depends(g
     return {"detail": "Conversation deleted"}
 
 # **New** Route to get all conversations by user
-@history_router.get("/get_user_conversations/{user_id}/")
+@history_router.get("/get_all_user_conversations/{user_id}/")
 def get_all_user_conversations_route(user_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
     return get_all_user_conversations(session, user_id)
                     
@@ -69,3 +72,10 @@ def update_message_route(message_id: int, updated_message: MessageUpdateContent,
     updated_message_obj = update_message_handler(session, message_id, updated_message.content)
 
     return {"detail": "Message content updated", "message": updated_message_obj}
+
+
+@history_router.get('/get_conversation_history/{conversation_id}')
+def get_conversation_history_route(conversation_id:str, session: Session = Depends(get_session), 
+                             current_user: User = Depends(get_current_user)):
+    history = get_conversation_history(session, conversation_id)
+    return history

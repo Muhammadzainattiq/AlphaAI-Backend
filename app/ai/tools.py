@@ -104,11 +104,11 @@ def tavily_search(state: SubState) -> SubState:
         about a single news article. The details may include the article content, any
         associated images, and additional contextual information (if available).
     """
-    max_results = 1
+    max_results = 2
     if state["single_or_multiple"] == "single":
         max_results = 1
     elif state["single_or_multiple"] == "multiple":
-        max_results = 1
+        max_results = 3
     tool = TavilySearchResults(
         max_results=max_results,
         include_answer=True,
@@ -169,14 +169,14 @@ def format_ai_response(data: Dict) -> Dict:
             filtered_messages.append({
                 "role": "human",
                 "content": message.content,
-                "timestamp": datetime.utcnow().isoformat() + "Z",  # ISO 8601 format
+                "created_at": datetime.utcnow().isoformat() + "Z",  # ISO 8601 format
                 "id": message.id  # Use the existing message ID
             })
         elif isinstance(message, AIMessage) and message.content.strip() != "":
             filtered_messages.append({
                 "role": "ai",
                 "content": message.content,
-                "timestamp": datetime.utcnow().isoformat() + "Z",  # ISO 8601 format
+                "created_at": datetime.utcnow().isoformat() + "Z",  # ISO 8601 format
                 "id": message.id  # Use the existing message ID
             })
 
