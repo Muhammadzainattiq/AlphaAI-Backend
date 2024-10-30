@@ -1,8 +1,14 @@
 from langgraph.graph import START, StateGraph, END
 import os
 from app.ai.tools import (SubState, check_single_or_multiple, tavily_search, web_loader, combine_news, continue_to_url_loads)
+from dotenv import load_dotenv
 
-os.environ['TAVILY_API_KEY'] = "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"
+# Load variables from .env file
+load_dotenv()
+
+# # Access the environment variable
+# tavily_api_key = os.getenv("TAVILY_API_KEY")
+# os.environ['TAVILY_API_KEY'] = "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"
 
 #Nodes
 

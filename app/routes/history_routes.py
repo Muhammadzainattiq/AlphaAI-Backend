@@ -19,12 +19,18 @@ def start_conversation(session: Session = Depends(get_session), current_user: Us
 @history_router.post("/add_message/{conversation_id}/")
 def send_message(conversation_id: str, message: MessageCreate, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
     new_message = add_message_to_conversation(session, conversation_id, message.role, message.content)
-    print("Returned by handler>>>", new_message)
     return new_message
 
 
 @history_router.get("/resume_old_conversation/{conversation_id}", response_model=HistoryResponse)
 def resume_conversation_route(conversation_id: str, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+
+    user_id = current_user.id
+    active_conversation = session.exec(select(Conversation).where(Conversation.user_id == user_id, Conversation.is_active == True)).first()
+    
+    if active_conversation:
+        active_conversation.is_active = False
+        session.add(active_conversation)
     mark_conversation_as_active(session, conversation_id)
     history = get_conversation_history(session, conversation_id)
     return history
@@ -41,9 +47,9 @@ def delete_conversation_route(conversation_id: str, session: Session = Depends(g
     return {"detail": "Conversation deleted"}
 
 # **New** Route to get all conversations by user
-@history_router.get("/get_all_user_conversations/{user_id}/")
-def get_all_user_conversations_route(user_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
-    return get_all_user_conversations(session, user_id)
+@history_router.get("/get_all_user_conversations/")
+def get_all_user_conversations_route(session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+    return get_all_user_conversations(session, current_user.id)
                     
 @history_router.put("/inactive_conversation/{conversation_id}/")
 def mark_conversation_inactive(conversation_id: str, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):

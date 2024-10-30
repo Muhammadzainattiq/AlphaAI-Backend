@@ -12,8 +12,9 @@ from datetime import datetime
 from app.ai.sub_agent import compile_sub_agent
 from app.ai.tools import SubState, format_ai_response, llm
 
-os.environ['TAVILY_API_KEY'] = "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"
+from dotenv import load_dotenv
 
+load_dotenv()
 
 def compile_main_agent(compiled_sub_agent):
     def fetch_news(query:str) ->str:
@@ -115,4 +116,3 @@ def call_main_agent(query: str, thread_id: str, main_agent):
     formatted_response = format_ai_response(response)  
     
     return formatted_response
-

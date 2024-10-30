@@ -122,8 +122,13 @@ def get_conversation_history(session: Session, conversation_id: str):
     messages = session.exec(select(Message).where(Message.conversation_id == conversation_id)).all()
 
     if not messages:
-        print(f"No messages found for conversation {conversation_id}.")
-        raise HTTPException(status_code=404, detail="No messages found for this conversation")
+        return {
+        "conversation_id": conversation.conversation_id,  # Use conversation_id as defined in the Conversation model
+        "user_id": conversation.user_id,
+        "created_at": conversation.created_at,
+        "is_active": conversation.is_active,
+        "messages": []
+    }
     
     # Return conversation history
     conversation_history = []

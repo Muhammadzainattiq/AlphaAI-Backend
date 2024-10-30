@@ -9,6 +9,16 @@
             "resourceGroup": "headlineaienv",
             "containerApp": "headlineai",
             "containerRegistry": "headlineaienv69cbdd"
+        },
+        {
+            "label": "alphaai-backend",
+            "type": "AcrDockerBuildRequest",
+            "dockerfilePath": "Dockerfile.dev",
+            "srcPath": ".",
+            "envPath": ".env",
+            "resourceGroup": "headlineaienv",
+            "containerApp": "alphaai-backend",
+            "containerRegistry": "headlineaienv69cbdd"
         }
     ]
 }
