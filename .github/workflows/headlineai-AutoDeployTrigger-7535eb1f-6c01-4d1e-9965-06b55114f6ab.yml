@@ -1,0 +1,48 @@
+name: Trigger auto deployment for headlineai
+
+# When this action will be executed
+on:
+  # Automatically trigger it when detected changes in repo
+  push:
+    branches: 
+      [ main ]
+    paths:
+    - '**'
+    - '.github/workflows/headlineai-AutoDeployTrigger-7535eb1f-6c01-4d1e-9965-06b55114f6ab.yml'
+
+  # Allow manual trigger 
+  workflow_dispatch:      
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions: 
+      id-token: write #This is required for requesting the OIDC JWT Token
+      contents: read #Required when GH token is used to authenticate with private repo
+
+    steps:
+      - name: Checkout to the branch
+        uses: actions/checkout@v2
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.HEADLINEAI_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.HEADLINEAI_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.HEADLINEAI_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and push container image to registry
+        uses: azure/container-apps-deploy-action@v2
+        with:
+          appSourcePath: ${{ github.workspace }}/Dockerfile.dev
+          _dockerfilePathKey_: _dockerfilePath_
+          registryUrl: headlineaienv69cbdd.azurecr.io
+          registryUsername: ${{ secrets.HEADLINEAI_REGISTRY_USERNAME }}
+          registryPassword: ${{ secrets.HEADLINEAI_REGISTRY_PASSWORD }}
+          containerAppName: headlineai
+          resourceGroup: headlineaienv
+          imageToBuild: headlineaienv69cbdd.azurecr.io/headlineai:${{ github.sha }}
+          _buildArgumentsKey_: |
+            _buildArgumentsValues_
+
+
